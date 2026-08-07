@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CoinSprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #0A0E14;
+    --ink-raised: #10151D;
+    --ink-raised-2: #151B24;
+    --paper: #E8E6DF;
+    --dim: #6B7480;
+    --dim-2: #454E5A;
+    --grid: #1B222C;
+    --phosphor: #5EEAD4;
+    --phosphor-dim: #245349;
+    --amber: #D4A24C;
+    --amber-dim: #4A3B22;
+    --brick: #C6554A;
+    --brick-dim: #3C201D;
+    --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  html, body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  a { color: var(--phosphor); }
+
+  button {
+    font-family: var(--font-mono);
+    cursor: pointer;
+  }
+
+  button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+  input {
+    font-family: var(--font-mono);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--phosphor);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 20px 20px 80px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--ink-raised);
+    border: 1px solid var(--grid);
+    flex-wrap: wrap;
+  }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .wordmark .tag {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--grid);
+    padding: 2px 6px;
+  }
+
+  .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--grid);
+    background: var(--ink);
+    font-size: 12px;
+    color: var(--dim);
+  }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); flex: none; }
+  .dot.live { background: var(--phosphor); box-shadow: 0 0 6px var(--phosphor); }
+  .dot.warn { background: var(--amber); }
+  .dot.off { background: var(--brick); }
+
+  .btn {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border: 1px solid var(--phosphor);
+    background: transparent;
+    color: var(--phosphor);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--phosphor); color: var(--ink); }
+
+  .btn.solid { background: var(--phosphor); color: var(--ink); }
+  .btn.solid:hover:not(:disabled) { background: var(--paper); border-color: var(--paper); }
+
+  .btn.danger { border-color: var(--brick); color: var(--brick); }
+  .btn.danger:hover:not(:disabled) { background: var(--brick); color: var(--paper); }
+
+  .btn.ghost { border-color: var(--grid); color: var(--dim); }
+  .btn.ghost:hover:not(:disabled) { border-color: var(--dim); color: var(--paper); background: transparent; }
+
+  /* ---------- settings ---------- */
+  details.settings {
+    margin-top: 12px;
+    background: var(--ink-raised);
+    border: 1px solid var(--grid);
+  }
+  details.settings summary {
+    cursor: pointer;
+    padding: 12px 20px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    list-style: none;
+  }
+  details.settings summary::-webkit-details-marker { display: none; }
+  details.settings summary:before { content: "▸ "; }
+  details.settings[open] summary:before { content: "▾ "; }
+  .settings-body {
+    padding: 4px 20px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+
+  /* ---------- generic field ---------- */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .field input {
+    background: var(--ink);
+    border: 1px solid var(--grid);
+    color: var(--paper);
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .field input:focus { border-color: var(--phosphor); }
+  .field .hint { font-size: 10px; color: var(--dim-2); }
+
+  /* ---------- panels / grid ---------- */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    margin-top: 16px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--ink-raised);
+    border: 1px solid var(--grid);
+  }
+  .panel-head {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--grid);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-head h2 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+  }
+  .panel-body { padding: 18px; }
+
+  /* ---------- launch form ---------- */
+  .launch-form .field { margin-bottom: 12px; }
+  .launch-defaults {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--grid);
+    font-size: 11px;
+    color: var(--dim);
+    display: grid;
+    gap: 4px;
+  }
+  .launch-defaults .row { display: flex; justify-content: space-between; }
+  .launch-defaults .row span:last-child { color: var(--paper); }
+
+  /* ---------- market table ---------- */
+  .market-controls {
+    display: flex;
+    gap: 8px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--grid);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .market-controls input[type="text"], .market-controls input:not([type]) {
+    flex: 1;
+    min-width: 140px;
+    background: var(--ink);
+    border: 1px solid var(--grid);
+    color: var(--paper);
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  .market-controls select {
+    background: var(--ink);
+    border: 1px solid var(--grid);
+    color: var(--paper);
+    padding: 7px 10px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+  .market-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .token-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: var(--grid);
+    flex: none;
+    border: 1px solid var(--grid);
+  }
+  .token-thumb-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--grid);
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim-2);
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid var(--grid);
+  }
+  .ticker-cell-row { display: flex; align-items: center; gap: 10px; }
+
+  table.market { width: 100%; border-collapse: collapse; }
+  table.market th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 500;
+    padding: 0 18px 10px;
+    border-bottom: 1px solid var(--grid);
+  }
+  table.market td {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--grid);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  table.market tbody tr { cursor: pointer; transition: background 0.1s ease; }
+  table.market tbody tr:hover { background: var(--ink-raised-2); }
+  table.market tbody tr.selected { background: var(--ink-raised-2); box-shadow: inset 2px 0 0 var(--phosphor); }
+  table.market tbody tr:last-child td { border-bottom: none; }
+
+  .ticker-cell { display: flex; flex-direction: column; }
+  .ticker-cell .sym { font-weight: 700; }
+  .ticker-cell .nm { color: var(--dim); font-size: 11px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid;
+  }
+  .tag.raising { color: var(--amber); border-color: var(--amber-dim); background: var(--amber-dim); }
+  .tag.live { color: var(--phosphor); border-color: var(--phosphor-dim); background: var(--phosphor-dim); }
+
+  .mini-gauge { width: 90px; height: 6px; background: var(--grid); position: relative; overflow: hidden; }
+  .mini-gauge > i { display: block; height: 100%; background: var(--amber); }
+  .mini-gauge.live > i { background: var(--phosphor); }
+
+  .empty {
+    padding: 48px 18px;
+    text-align: center;
+    color: var(--dim);
+  }
+  .empty .big { font-family: var(--font-display); font-size: 16px; color: var(--paper); margin-bottom: 6px; }
+
+  /* price chart */
+  .chart-wrap {
+    margin-top: 16px;
+    border: 1px solid var(--grid);
+    background: var(--ink);
+    padding: 14px 16px 6px;
+  }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .chart-head h3 { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
+  .chart-canvas-box { height: 220px; position: relative; }
+  .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim-2); font-size: 12px; }
+
+  /* manipulation alert */
+  .alert-badge {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--brick-dim);
+    background: var(--brick-dim);
+    color: var(--brick);
+    font-size: 12px;
+  }
+  .alert-badge.show { display: flex; }
+  .alert-badge .dot { background: var(--brick); box-shadow: 0 0 6px var(--brick); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* security scorecard */
+  .security-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--grid);
+    border: 1px solid var(--grid);
+  }
+  .security-item {
+    background: var(--ink);
+    padding: 10px 12px;
+    font-size: 11px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .security-item .mark { color: var(--phosphor); font-weight: 700; flex: none; }
+  .security-item .mark.warn { color: var(--amber); }
+  .security-item .label { color: var(--dim); line-height: 1.4; }
+  .security-item .label b { color: var(--paper); font-weight: 500; display: block; }
+
+  /* ---------- detail ---------- */
+  .detail { margin-top: 16px; }
+  .detail-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .detail-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .detail-title .sym { font-family: var(--font-display); font-weight: 700; font-size: 22px; }
+  .detail-title .nm { color: var(--dim); font-size: 13px; }
+  .detail-price { font-family: var(--font-display); font-size: 28px; font-weight: 700; text-align: right; }
+  .detail-price .unit { font-size: 12px; color: var(--dim); font-family: var(--font-mono); font-weight: 400; }
+
+  /* graduation gauge — the signature element */
+  .gauge {
+    margin-top: 20px;
+    padding: 16px 18px;
+    border: 1px solid var(--grid);
+    background: var(--ink);
+  }
+  .gauge-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 8px; }
+  .gauge-labels .status { color: var(--amber); font-weight: 700; letter-spacing: 0.05em; }
+  .gauge-labels .status.live { color: var(--phosphor); }
+  .gauge-track {
+    position: relative;
+    height: 22px;
+    background: var(--grid);
+    display: flex;
+  }
+  .gauge-tick {
+    flex: 1;
+    border-right: 1px solid var(--ink);
+  }
+  .gauge-tick:last-child { border-right: none; }
+  .gauge-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--amber);
+    transition: width 0.4s cubic-bezier(.2,.8,.2,1);
+  }
+  .gauge-fill.live { background: var(--phosphor); }
+  .gauge-numbers { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: 8px; }
+  .gauge-numbers b { color: var(--paper); font-weight: 500; }
+
+  /* order tickets */
+  .tickets {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .tickets { grid-template-columns: 1fr; } }
+
+  .ticket { border: 1px solid var(--grid); background: var(--ink); }
+  .ticket-head {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--grid);
+  }
+  .ticket.buy .ticket-head { color: var(--phosphor); }
+  .ticket.sell .ticket-head { color: var(--brick); }
+  .ticket-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .amount-row { display: flex; gap: 8px; }
+  .amount-row input { flex: 1; }
+  .amount-row .max { font-size: 10px; color: var(--dim); border: 1px solid var(--grid); padding: 0 10px; background: none; }
+  .amount-row .max:hover { color: var(--paper); border-color: var(--dim); }
+
+  .quote { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 3px; }
+  .quote b { color: var(--paper); font-weight: 500; }
+
+  .slippage-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); }
+  .slippage-row input { width: 54px; padding: 6px 8px; font-size: 11px; }
+
+  .ticket .btn { width: 100%; padding: 12px; }
+
+  /* activity log */
+  .log { margin-top: 16px; }
+  .log-line {
+    display: grid;
+    grid-template-columns: 66px 56px 1fr;
+    gap: 10px;
+    padding: 8px 18px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--grid);
+    color: var(--dim);
+  }
+  .log-line:last-child { border-bottom: none; }
+  .log-line .kind { font-weight: 700; letter-spacing: 0.04em; }
+  .log-line .kind.buy { color: var(--phosphor); }
+  .log-line .kind.sell { color: var(--brick); }
+  .log-line .kind.launch { color: var(--paper); }
+  .log-line .kind.grad { color: var(--amber); }
+  .log-line .detail-text { color: var(--paper); }
+
+  /* toast / banner messages */
+  .banner {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--grid);
+    font-size: 12px;
+    display: none;
+  }
+  .banner.show { display: block; }
+  .banner.error { border-color: var(--brick); color: var(--brick); background: var(--brick-dim); }
+  .banner.info { border-color: var(--dim-2); color: var(--paper); }
+  .banner.success { border-color: var(--phosphor); color: var(--phosphor); background: var(--phosphor-dim); }
+
+  .foot-note {
+    margin-top: 28px;
+    font-size: 11px;
+    color: var(--dim-2);
+    line-height: 1.7;
+    border-top: 1px solid var(--grid);
+    padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="wordmark">CoinSprint <span class="tag">fair-launch terminal</span></div>
+    <div class="status-row">
+      <span class="pill" id="netPill"><span class="dot off" id="netDot"></span><span id="netLabel">no wallet</span></span>
+      <button class="btn" id="connectBtn">Connect Wallet</button>
+    </div>
+  </div>
+
+  <details class="settings" id="settingsPanel" open>
+    <summary>Network &amp; contract config — set these before anything else will work</summary>
+    <div class="settings-body">
+      <div class="field">
+        <label for="cfgFactory">Launchpad factory address</label>
+        <input id="cfgFactory" placeholder="0x… (from deploy.mjs output)" />
+      </div>
+      <div class="field">
+        <label for="cfgUsdc">USDC address</label>
+        <input id="cfgUsdc" placeholder="0x… (mock locally, real USDC on Arc)" />
+        <span class="hint">Decimals are read from the token itself — never assumed.</span>
+      </div>
+      <div class="field">
+        <label for="cfgRegistry">Metadata registry address (optional)</label>
+        <input id="cfgRegistry" placeholder="0x… (from deploy.mjs, enables images/socials)" />
+        <span class="hint">Leave blank to run without token images/social links.</span>
+      </div>
+      <div class="field">
+        <label for="cfgSlippage">Default slippage tolerance (%)</label>
+        <input id="cfgSlippage" value="1" />
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn ghost" id="applyCfgBtn">Apply &amp; load market</button>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn ghost" id="addArcNetworkBtn">+ Add Arc Testnet to wallet</button>
+        <span class="hint">Chain ID 5042002 · rpc.testnet.arc.network — verified against Circle's docs, not guessed.</span>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn ghost" id="fillArcUsdcBtn">Fill in verified Arc Testnet USDC</button>
+        <span class="hint">Only fills the USDC field — factory address always comes from your own deploy.</span>
+      </div>
+    </div>
+  </details>
+
+  <div class="banner" id="networkBanner"></div>
+  <div class="banner" id="globalBanner"></div>
+
+  <div class="security-grid">
+    <div class="security-item"><span class="mark">✓</span><span class="label"><b>No pre-mine</b>100% of supply starts in the curve</span></div>
+    <div class="security-item"><span class="mark">✓</span><span class="label"><b>No mint function</b>supply is fixed forever, by code</span></div>
+    <div class="security-item"><span class="mark">✓</span><span class="label"><b>No freeze / pause</b>nobody can lock your tokens</span></div>
+    <div class="security-item"><span class="mark">✓</span><span class="label"><b>LP burned on graduation</b>liquidity locked forever, verifiably</span></div>
+    <div class="security-item"><span class="mark warn">◆</span><span class="label"><b>Anti-whale cap</b><span id="secWhaleStatus">connect to check</span></span></div>
+    <div class="security-item"><span class="mark warn">◆</span><span class="label"><b>Unaudited</b>reviewed and tested, not professionally audited — <a href="#" style="color:var(--dim)">read why</a></span></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h2>Launch a token</h2></div>
+      <div class="panel-body launch-form">
+        <div class="field">
+          <label for="lName">Name</label>
+          <input id="lName" placeholder="e.g. Institutional Dog" maxlength="40" />
+        </div>
+        <div class="field">
+          <label for="lSymbol">Symbol</label>
+          <input id="lSymbol" placeholder="e.g. IDOG" maxlength="10" style="text-transform:uppercase" />
+        </div>
+        <div class="field" id="launchImageRow" style="display:none;">
+          <label for="lImage">Image URL (optional)</label>
+          <input id="lImage" placeholder="https://…" maxlength="300" />
+        </div>
+        <div class="field" id="launchSocialsRow" style="display:none;">
+          <label for="lTwitter">Social links (all optional)</label>
+          <input id="lTwitter" placeholder="X / Twitter URL" maxlength="300" style="margin-bottom:6px;" />
+          <input id="lTelegram" placeholder="Telegram URL" maxlength="300" style="margin-bottom:6px;" />
+          <input id="lWebsite" placeholder="Website URL" maxlength="300" />
+        </div>
+        <button class="btn solid" id="launchBtn" style="width:100%;padding:12px;" disabled>Connect wallet to launch</button>
+        <div class="launch-defaults" id="launchDefaults">
+          <div class="row"><span>Total supply</span><span>1,000,000,000</span></div>
+          <div class="row"><span>Pre-mined to you</span><span>0 — fair launch</span></div>
+          <div class="row"><span>Trade fee</span><span id="dfFee">—</span></div>
+          <div class="row"><span>&nbsp;&nbsp;→ creator gets</span><span id="dfCreatorFee">—</span></div>
+          <div class="row"><span>&nbsp;&nbsp;→ platform gets</span><span id="dfPlatformFee">—</span></div>
+          <div class="row"><span>Graduation threshold</span><span id="dfThreshold">—</span></div>
+          <div class="row"><span>Anti-whale cap</span><span id="dfMaxWallet">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Market</h2>
+        <button class="btn ghost" id="refreshBtn" style="padding:5px 10px;font-size:10px;">Refresh</button>
+      </div>
+      <div class="market-controls" id="marketControls" style="display:none;">
+        <input id="marketSearch" placeholder="Search name or symbol…" />
+        <select id="marketSort">
+          <option value="newest">Newest</option>
+          <option value="trending">Trending (24h volume)</option>
+          <option value="price">Price</option>
+          <option value="raise">Raise %</option>
+        </select>
+        <label class="market-toggle"><input type="checkbox" id="marketMineOnly" /> My holdings only</label>
+      </div>
+      <div id="marketBody">
+        <div class="empty"><div class="big">NO WALLET CONNECTED</div>Connect a wallet and set the factory address above to load the market.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail" id="detailSection" style="display:none;">
+    <div class="panel">
+      <div class="panel-head"><h2 id="detailHeading">Token detail</h2><button class="btn ghost" id="closeDetailBtn" style="padding:5px 10px;font-size:10px;">Close</button></div>
+      <div class="panel-body">
+        <div class="detail-top">
+          <div class="detail-title">
+            <img class="token-thumb" id="dImage" style="display:none;width:44px;height:44px;" />
+            <span class="sym" id="dSym">—</span>
+            <span class="nm" id="dName">—</span>
+          </div>
+          <div class="detail-price"><span id="dPrice">—</span> <span class="unit">USDC / token</span></div>
+        </div>
+        <div class="quote" id="dSocials" style="display:none;gap:10px;flex-direction:row;margin-top:-4px;margin-bottom:4px;"></div>
+        <div class="quote" id="dFeeNote" style="margin-top:-8px;margin-bottom:4px;">—</div>
+
+        <div class="gauge">
+          <div class="gauge-labels">
+            <span>RAISE PROGRESS</span>
+            <span class="status" id="gStatus">RAISING</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gFill" style="width:0%"></div>
+            <div class="gauge-tick"></div><div class="gauge-tick"></div><div class="gauge-tick"></div><div class="gauge-tick"></div>
+            <div class="gauge-tick"></div><div class="gauge-tick"></div><div class="gauge-tick"></div><div class="gauge-tick"></div>
+            <div class="gauge-tick"></div><div class="gauge-tick"></div>
+          </div>
+          <div class="gauge-numbers">
+            <span><b id="gRaised">0</b> USDC raised</span>
+            <span id="gPct">0%</span>
+            <span><b id="gThreshold">0</b> USDC to graduate</span>
+          </div>
+        </div>
+
+        <div class="alert-badge" id="manipAlert">
+          <span class="dot" style="width:6px;height:6px;border-radius:50%;flex:none;"></span>
+          <span id="manipAlertText">—</span>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-head">
+            <h3>Price history</h3>
+            <span class="quote" id="chartMeta">—</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="priceChart"></canvas>
+            <div class="chart-empty" id="chartEmpty">No trades yet — chart fills in as buys/sells happen.</div>
+          </div>
+        </div>
+
+        <div class="tickets">
+          <div class="ticket buy">
+            <div class="ticket-head">BUY</div>
+            <div class="ticket-body">
+              <div class="amount-row">
+                <input id="buyAmount" placeholder="USDC amount" inputmode="decimal" />
+                <button class="max" id="buyMaxBtn">MAX</button>
+              </div>
+              <div class="quote" id="buyQuote">Enter an amount to see estimated tokens received.</div>
+              <div class="slippage-row">Slippage tolerance <input id="buySlippage" value="1" />%</div>
+              <button class="btn solid" id="buyBtn" disabled>Connect wallet</button>
+            </div>
+          </div>
+          <div class="ticket sell">
+            <div class="ticket-head">SELL</div>
+            <div class="ticket-body">
+              <div class="amount-row">
+                <input id="sellAmount" placeholder="Token amount" inputmode="decimal" />
+                <button class="max" id="sellMaxBtn">MAX</button>
+              </div>
+              <div class="quote" id="sellQuote">Enter an amount to see estimated USDC received.</div>
+              <div class="slippage-row">Slippage tolerance <input id="sellSlippage" value="1" />%</div>
+              <button class="btn danger" id="sellBtn" disabled>Connect wallet</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="banner" id="detailBanner"></div>
+
+        <div class="panel" style="margin-top:16px;border-color:var(--grid);">
+          <div class="panel-head"><h2>Activity</h2></div>
+          <div id="logBody"><div class="empty" style="padding:24px;">No activity yet on this token.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    Unaudited reference implementation. Trade fee 1% each way. Graduation burns 100% of LP tokens — nobody, including the token creator, can withdraw graduation liquidity. This interface does not represent Circle, Arc, or any exchange — set the contract addresses above to whatever you've actually deployed.
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const FACTORY_ABI = [{"inputs":[{"internalType":"address","name":"usdc_","type":"address"},{"internalType":"address","name":"router_","type":"address"},{"internalType":"uint256","name":"defaultInitialVirtualUsdc_","type":"uint256"},{"internalType":"uint256","name":"defaultGraduationThreshold_","type":"uint256"},{"internalType":"address","name":"platformFeeRecipient_","type":"address"},{"internalType":"uint256","name":"platformFeeBps_","type":"uint256"},{"internalType":"uint256","name":"defaultMaxWalletBps_","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"FailedDeployment","type":"error"},{"inputs":[{"internalType":"uint256","name":"balance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"InsufficientBalance","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":true,"internalType":"address","name":"creator","type":"address"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"}],"name":"TokenLaunched","type":"event"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"allTokens","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"allTokensLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"name","type":"string"},{"internalType":"string","name":"symbol","type":"string"}],"name":"createToken","outputs":[{"internalType":"address","name":"token","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"defaultGraduationThreshold","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"defaultInitialVirtualUsdc","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"defaultMaxWalletBps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFeeBps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFeeRecipient","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"router","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdc","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
+
+  const CURVE_ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"allowance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientAllowance","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"uint256","name":"balance","type":"uint256"},{"internalType":"uint256","name":"needed","type":"uint256"}],"name":"ERC20InsufficientBalance","type":"error"},{"inputs":[{"internalType":"address","name":"approver","type":"address"}],"name":"ERC20InvalidApprover","type":"error"},{"inputs":[{"internalType":"address","name":"receiver","type":"address"}],"name":"ERC20InvalidReceiver","type":"error"},{"inputs":[{"internalType":"address","name":"sender","type":"address"}],"name":"ERC20InvalidSender","type":"error"},{"inputs":[{"internalType":"address","name":"spender","type":"address"}],"name":"ERC20InvalidSpender","type":"error"},{"inputs":[],"name":"InvalidInitialization","type":"error"},{"inputs":[],"name":"NotInitializing","type":"error"},{"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"SafeERC20FailedOperation","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":false,"internalType":"uint256","name":"usdcIn","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"tokensOut","type":"uint256"}],"name":"Buy","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"pair","type":"address"},{"indexed":false,"internalType":"uint256","name":"usdcToLiquidity","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"tokensToLiquidity","type":"uint256"}],"name":"Graduated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"version","type":"uint64"}],"name":"Initialized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"uint256","name":"tokensIn","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdcOut","type":"uint256"}],"name":"Sell","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"BURN_ADDRESS","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"CURVE_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LIQUIDITY_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TOTAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TRADE_FEE_BPS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"usdcIn","type":"uint256"},{"internalType":"uint256","name":"minTokensOut","type":"uint256"}],"name":"buy","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"creator","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"currentPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"graduate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"graduated","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"graduationThreshold","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"name_","type":"string"},{"internalType":"string","name":"symbol_","type":"string"},{"internalType":"address","name":"usdc_","type":"address"},{"internalType":"address","name":"router_","type":"address"},{"internalType":"address","name":"creator_","type":"address"},{"internalType":"uint256","name":"initialVirtualUsdc_","type":"uint256"},{"internalType":"uint256","name":"graduationThreshold_","type":"uint256"},{"internalType":"address","name":"platformFeeRecipient_","type":"address"},{"internalType":"uint256","name":"platformFeeBps_","type":"uint256"},{"internalType":"uint256","name":"maxWalletBps_","type":"uint256"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"k","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxWalletBps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFeeBps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"platformFeeRecipient","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"realUsdcReserve","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"router","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokensIn","type":"uint256"},{"internalType":"uint256","name":"minUsdcOut","type":"uint256"}],"name":"sell","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"usdc","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdcDecimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"virtualTokenReserve","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"virtualUsdcReserve","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
+
+  const REGISTRY_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":true,"internalType":"address","name":"creator","type":"address"}],"name":"MetadataUpdated","type":"event"},{"inputs":[],"name":"MAX_DESCRIPTION_LENGTH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_URL_LENGTH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"getMetadata","outputs":[{"components":[{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"string","name":"twitter","type":"string"},{"internalType":"string","name":"telegram","type":"string"},{"internalType":"string","name":"website","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"bool","name":"isSet","type":"bool"}],"internalType":"struct TokenMetadataRegistry.Metadata","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"metadata","outputs":[{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"string","name":"twitter","type":"string"},{"internalType":"string","name":"telegram","type":"string"},{"internalType":"string","name":"website","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"bool","name":"isSet","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"string","name":"imageUrl","type":"string"},{"internalType":"string","name":"twitter","type":"string"},{"internalType":"string","name":"telegram","type":"string"},{"internalType":"string","name":"website","type":"string"},{"internalType":"string","name":"description","type":"string"}],"name":"setMetadata","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+  const ERC20_MIN_ABI = [
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)",
+    "function balanceOf(address) view returns (uint256)",
+    "function allowance(address,address) view returns (uint256)",
+    "function approve(address,uint256) returns (bool)"
+  ];
+
+  const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
+  // ---------------- state ----------------
+  const state = {
+    provider: null,
+    signer: null,
+    address: null,
+    factory: null,
+    usdc: null,
+    registry: null,
+    usdcDecimals: 18,
+    tokens: [],          // [{address, name, symbol, price, raised, threshold, graduated}]
+    selected: null,       // address of selected token
+    selectedCurve: null,  // ethers contract for selected token
+    selectedListener: null,
+    chart: null,
+  };
+
+  // ---------------- utils ----------------
+  const $ = (id) => document.getElementById(id);
+
+  function short(addr) {
+    return addr ? addr.slice(0, 6) + "…" + addr.slice(-4) : "";
+  }
+
+  function fmtNumber(n, maxDp = 4) {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    if (n === 0) return "0";
+    const abs = Math.abs(n);
+    if (abs >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: maxDp });
+    const exp = Math.floor(Math.log10(abs));
+    const dp = Math.min(18, Math.max(maxDp, -exp + 2));
+    return n.toFixed(dp).replace(/0+$/, "").replace(/\.$/, "");
+  }
+
+  function bigToNumber(big, decimals) {
+    return Number(ethers.formatUnits(big, decimals));
+  }
+
+  function banner(el, kind, msg) {
+    el.className = "banner show " + kind;
+    el.textContent = msg;
+  }
+  function clearBanner(el) {
+    el.className = "banner";
+    el.textContent = "";
+  }
+
+  // Mirrors MemecoinBondingCurve.buy()/sell() exactly, in BigInt, so the
+  // UI can quote before sending — including the exact same truncating
+  // integer division Solidity uses. Never approximate this with floats.
+  function simulateBuy(usdcIn, vUsdc, vToken, k, feeBps) {
+    const fee = (usdcIn * feeBps) / 10000n;
+    const usdcInAfterFee = usdcIn - fee;
+    const newVUsdc = vUsdc + usdcInAfterFee;
+    const newVToken = k / newVUsdc;
+    const tokensOut = vToken - newVToken;
+    return { tokensOut, fee };
+  }
+  function simulateSell(tokensIn, vUsdc, vToken, k, feeBps) {
+    const newVToken = vToken + tokensIn;
+    const newVUsdc = k / newVToken;
+    const usdcOutBeforeFee = vUsdc - newVUsdc;
+    const fee = (usdcOutBeforeFee * feeBps) / 10000n;
+    const usdcOut = usdcOutBeforeFee - fee;
+    return { usdcOut, fee };
+  }
+
+  function applySlippage(amount, pctStr) {
+    const pct = Math.max(0, Math.min(50, Number(pctStr) || 0));
+    const bps = BigInt(Math.round(pct * 100));
+    return (amount * (10000n - bps)) / 10000n;
+  }
+
+  async function addArcNetwork() {
+    if (!window.ethereum) {
+      banner($("globalBanner"), "error", "NO INJECTED WALLET FOUND — install MetaMask or a compatible wallet extension first.");
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: "0x" + (5042002).toString(16),
+          chainName: "Arc Testnet",
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+          rpcUrls: ["https://rpc.testnet.arc.network"],
+          blockExplorerUrls: ["https://testnet.arcscan.app"],
+        }],
+      });
+      banner($("globalBanner"), "success", "Arc Testnet added — switch to it in your wallet, then connect.");
+    } catch (e) {
+      banner($("globalBanner"), "error", "COULD NOT ADD NETWORK: " + (e.shortMessage || e.message || String(e)));
+    }
+  }
+
+  function fillArcUsdc() {
+    $("cfgUsdc").value = "0x3600000000000000000000000000000000000000";
+  }
+
+  // ---------------- wallet / config ----------------
+  async function connectWallet() {
+    if (!window.ethereum) {
+      banner($("globalBanner"), "error", "NO INJECTED WALLET FOUND — install MetaMask or a compatible wallet extension, then reload.");
+      return;
+    }
+    try {
+      state.provider = new ethers.BrowserProvider(window.ethereum);
+      await state.provider.send("eth_requestAccounts", []);
+      state.signer = await state.provider.getSigner();
+      state.address = await state.signer.getAddress();
+
+      window.ethereum.on && window.ethereum.on("accountsChanged", () => window.location.reload());
+      window.ethereum.on && window.ethereum.on("chainChanged", () => window.location.reload());
+
+      const net = await state.provider.getNetwork();
+      const KNOWN_NETWORKS = { "5042002": "Arc Testnet", "31337": "local Hardhat node" };
+      const knownName = KNOWN_NETWORKS[net.chainId.toString()];
+      $("netDot").className = "dot live";
+      $("netLabel").textContent = short(state.address) + " · " + (knownName || ("chain " + net.chainId.toString()));
+      if (!knownName) {
+        banner($("networkBanner"), "info", "Connected to chain ID " + net.chainId.toString() + " — not one this UI recognizes by name. Make sure it's actually where your factory and USDC addresses live before trading real funds.");
+      } else {
+        clearBanner($("networkBanner"));
+      }
+      $("connectBtn").textContent = "Connected";
+      $("connectBtn").disabled = true;
+      clearBanner($("globalBanner"));
+
+      await applyConfig();
+    } catch (e) {
+      banner($("globalBanner"), "error", "CONNECTION FAILED: " + (e.shortMessage || e.message || String(e)));
+    }
+  }
+
+  async function applyConfig() {
+    const factoryAddr = $("cfgFactory").value.trim();
+    const usdcAddr = $("cfgUsdc").value.trim();
+
+    if (!state.signer) {
+      banner($("globalBanner"), "info", "Connect a wallet first.");
+      return;
+    }
+    if (!ethers.isAddress(factoryAddr) || !ethers.isAddress(usdcAddr)) {
+      banner($("globalBanner"), "error", "FACTORY AND USDC ADDRESSES MUST BOTH BE SET to valid addresses before the market can load. Run deploy.mjs and paste its output above, or enter Arc's real addresses once confirmed.");
+      return;
+    }
+
+    try {
+      state.factory = new ethers.Contract(factoryAddr, FACTORY_ABI, state.signer);
+      state.usdc = new ethers.Contract(usdcAddr, ERC20_MIN_ABI, state.signer);
+      state.usdcDecimals = Number(await state.usdc.decimals());
+
+      const registryAddr = $("cfgRegistry").value.trim();
+      state.registry = (registryAddr && ethers.isAddress(registryAddr))
+        ? new ethers.Contract(registryAddr, REGISTRY_ABI, state.signer)
+        : null;
+      $("launchImageRow").style.display = state.registry ? "flex" : "none";
+      $("launchSocialsRow").style.display = state.registry ? "flex" : "none";
+
+      const [fee, threshold, initialVirtual, platformBps, platformRecipient, maxWalletBps] = await Promise.all([
+        (async () => { const c = new ethers.Contract(await state.factory.implementation(), CURVE_ABI, state.provider); return c.TRADE_FEE_BPS(); })(),
+        state.factory.defaultGraduationThreshold(),
+        state.factory.defaultInitialVirtualUsdc(),
+        state.factory.platformFeeBps(),
+        state.factory.platformFeeRecipient(),
+        state.factory.defaultMaxWalletBps(),
+      ]);
+      const totalPct = Number(fee) / 100;
+      const platformPct = Number(platformBps) / 100;
+      const creatorPct = totalPct - platformPct;
+      $("dfFee").textContent = totalPct.toString() + "% per trade, total";
+      $("dfCreatorFee").textContent = creatorPct.toString() + "%";
+      $("dfPlatformFee").textContent = platformBps > 0n ? (platformPct.toString() + "% (" + short(platformRecipient) + ")") : "0% (none set)";
+      $("dfThreshold").textContent = fmtNumber(bigToNumber(threshold, state.usdcDecimals)) + " USDC raised";
+      const maxWalletPct = Number(maxWalletBps) / 100;
+      $("dfMaxWallet").textContent = maxWalletBps > 0n ? (maxWalletPct.toString() + "% of supply, pre-graduation") : "disabled";
+      $("secWhaleStatus").textContent = maxWalletBps > 0n
+        ? (maxWalletPct.toString() + "% max per wallet, enforced on-chain")
+        : "disabled for this factory";
+      $("secWhaleStatus").parentElement.previousElementSibling.className = maxWalletBps > 0n ? "mark" : "mark warn";
+      void initialVirtual;
+
+      $("launchBtn").disabled = false;
+      $("launchBtn").textContent = "Launch Token";
+      clearBanner($("globalBanner"));
+      $("settingsPanel").removeAttribute("open");
+
+      await loadMarket();
+    } catch (e) {
+      banner($("globalBanner"), "error", "COULD NOT READ FROM THOSE ADDRESSES: " + (e.shortMessage || e.message || String(e)) + " — check the factory address is really a LaunchpadFactory and the network matches your wallet.");
+    }
+  }
+
+  // ---------------- market ----------------
+  const MARKET_LOAD_LIMIT = 60; // see note in loadMarket() on why this exists
+
+  async function loadMarket() {
+    if (!state.factory) return;
+    $("marketBody").innerHTML = '<div class="empty">Loading market…</div>';
+    try {
+      const latestBlock = await state.provider.getBlockNumber();
+      const events = await state.factory.queryFilter(state.factory.filters.TokenLaunched(), 0, latestBlock);
+
+      // Scaling cap: this UI queries each token's full state directly
+      // over RPC rather than through an indexed backend — deliberately
+      // simple for a static, no-server frontend, but it means cost grows
+      // linearly with token count. Capping to the most recent N keeps
+      // the page responsive; a real indexer (subgraph or similar) is the
+      // actual fix once this has real volume, not a bigger cap here.
+      const recentEvents = events.slice(-MARKET_LOAD_LIMIT);
+      state.marketTruncated = events.length > recentEvents.length;
+      state.marketTotalCount = events.length;
+
+      const tokens = await Promise.all(recentEvents.map(async (ev) => {
+        const addr = ev.args.token;
+        const curve = new ethers.Contract(addr, CURVE_ABI, state.provider);
+        const calls = [
+          curve.currentPrice(),
+          curve.realUsdcReserve(),
+          curve.graduationThreshold(),
+          curve.graduated(),
+          curve.name(),
+          curve.symbol(),
+          state.address ? curve.balanceOf(state.address) : Promise.resolve(0n),
+          curve.queryFilter(curve.filters.Buy(), 0, latestBlock),
+        ];
+        const [price, raised, threshold, graduated, name, symbol, myBalance, buyEvents] = await Promise.all(calls);
+        const volume = buyEvents.reduce((sum, e) => sum + e.args.usdcIn, 0n);
+
+        let imageUrl = "";
+        if (state.registry) {
+          try {
+            const meta = await state.registry.getMetadata(addr);
+            if (meta.isSet) imageUrl = meta.imageUrl;
+          } catch { /* registry read failures never block the market list */ }
+        }
+
+        return {
+          address: addr, name, symbol,
+          price: bigToNumber(price, 18),
+          raised: bigToNumber(raised, state.usdcDecimals),
+          threshold: bigToNumber(threshold, state.usdcDecimals),
+          graduated,
+          myBalance,
+          volume: bigToNumber(volume, state.usdcDecimals),
+          imageUrl,
+          block: ev.blockNumber,
+        };
+      }));
+
+      state.tokens = tokens.reverse();
+      $("marketControls").style.display = "flex";
+      renderMarket();
+    } catch (e) {
+      $("marketBody").innerHTML = '<div class="empty"><div class="big">COULD NOT LOAD MARKET</div>' + escapeHtml(e.shortMessage || e.message || String(e)) + '</div>';
+    }
+  }
+
+  function renderMarket() {
+    if (state.tokens.length === 0) {
+      $("marketBody").innerHTML = '<div class="empty"><div class="big">NO TOKENS LAUNCHED YET</div>Be the first — launch one on the left.</div>';
+      return;
+    }
+
+    const query = ($("marketSearch").value || "").trim().toLowerCase();
+    const sortMode = $("marketSort").value;
+    const mineOnly = $("marketMineOnly").checked;
+
+    let list = state.tokens.filter((t) => {
+      if (mineOnly && t.myBalance === 0n) return false;
+      if (query && !t.name.toLowerCase().includes(query) && !t.symbol.toLowerCase().includes(query)) return false;
+      return true;
+    });
+
+    if (sortMode === "trending") list = [...list].sort((a, b) => b.volume - a.volume);
+    else if (sortMode === "price") list = [...list].sort((a, b) => b.price - a.price);
+    else if (sortMode === "raise") list = [...list].sort((a, b) => (b.threshold > 0 ? b.raised / b.threshold : 0) - (a.threshold > 0 ? a.raised / a.threshold : 0));
+    else list = [...list].sort((a, b) => b.block - a.block); // newest
+
+    if (list.length === 0) {
+      $("marketBody").innerHTML = '<div class="empty"><div class="big">NO MATCHES</div>Try a different search or turn off "My holdings only."</div>';
+      return;
+    }
+
+    let rows = list.map((t) => {
+      const pct = t.threshold > 0 ? Math.min(100, (t.raised / t.threshold) * 100) : 0;
+      const sel = t.address === state.selected ? " selected" : "";
+      const thumb = t.imageUrl
+        ? `<img class="token-thumb" src="${escapeHtml(t.imageUrl)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="token-thumb-placeholder" style="display:none;">${escapeHtml(t.symbol.slice(0, 2))}</div>`
+        : `<div class="token-thumb-placeholder">${escapeHtml(t.symbol.slice(0, 2))}</div>`;
+      return `<tr class="${sel.trim()}" data-addr="${t.address}">
+        <td><div class="ticker-cell-row">${thumb}<div class="ticker-cell"><span class="sym">${escapeHtml(t.symbol)}</span><span class="nm">${escapeHtml(t.name)}</span></div></div></td>
+        <td>${fmtNumber(t.price, 6)}</td>
+        <td><div class="mini-gauge${t.graduated ? " live" : ""}"><i style="width:${pct}%"></i></div></td>
+        <td>${t.graduated ? '<span class="tag live">LIVE ON DEX</span>' : '<span class="tag raising">RAISING</span>'}</td>
+      </tr>`;
+    }).join("");
+
+    const truncNote = state.marketTruncated
+      ? `<div class="quote" style="padding:8px 18px;">Showing the ${MARKET_LOAD_LIMIT} most recent of ${state.marketTotalCount} tokens — see the note in loadMarket() on why, and use search to find older ones.</div>`
+      : "";
+
+    $("marketBody").innerHTML = `<table class="market">
+      <thead><tr><th>Ticker</th><th>Price (USDC)</th><th>Raise</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>${truncNote}`;
+
+    $("marketBody").querySelectorAll("tr[data-addr]").forEach((row) => {
+      row.addEventListener("click", () => selectToken(row.getAttribute("data-addr")));
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------------- launch ----------------
+  async function handleLaunch() {
+    const name = $("lName").value.trim();
+    const symbol = $("lSymbol").value.trim().toUpperCase();
+    if (!name || !symbol) {
+      banner($("globalBanner"), "error", "NAME AND SYMBOL ARE BOTH REQUIRED.");
+      return;
+    }
+    $("launchBtn").disabled = true;
+    $("launchBtn").textContent = "Confirm in wallet…";
+    try {
+      const tx = await state.factory.createToken(name, symbol);
+      $("launchBtn").textContent = "Launching…";
+      const receipt = await tx.wait();
+      const ev = receipt.logs.map((l) => { try { return state.factory.interface.parseLog(l); } catch { return null; } }).find((e) => e && e.name === "TokenLaunched");
+      banner($("globalBanner"), "success", "LAUNCHED " + symbol + " AT " + (ev ? ev.args.token : "?") + " — 100% fair launch, nothing pre-mined.");
+
+      // Metadata is a separate transaction on purpose: if it fails for
+      // any reason, the token launch itself — which already succeeded —
+      // must never be reported as failed alongside it.
+      if (ev && state.registry) {
+        const imageUrl = $("lImage").value.trim();
+        const twitter = $("lTwitter").value.trim();
+        const telegram = $("lTelegram").value.trim();
+        const website = $("lWebsite").value.trim();
+        if (imageUrl || twitter || telegram || website) {
+          try {
+            $("launchBtn").textContent = "Setting metadata…";
+            await (await state.registry.setMetadata(ev.args.token, imageUrl, twitter, telegram, website, "")).wait();
+          } catch (metaErr) {
+            banner($("globalBanner"), "info", "Token launched successfully, but setting its image/socials failed: " + (metaErr.shortMessage || metaErr.message || String(metaErr)) + " — you can retry later, the token itself is unaffected.");
+          }
+        }
+      }
+
+      $("lName").value = "";
+      $("lSymbol").value = "";
+      $("lImage").value = "";
+      $("lTwitter").value = "";
+      $("lTelegram").value = "";
+      $("lWebsite").value = "";
+      await loadMarket();
+      if (ev) selectToken(ev.args.token);
+    } catch (e) {
+      banner($("globalBanner"), "error", "LAUNCH FAILED: " + (e.shortMessage || e.message || String(e)));
+    } finally {
+      $("launchBtn").disabled = false;
+      $("launchBtn").textContent = "Launch Token";
+    }
+  }
+
+  // ---------------- token detail ----------------
+  async function selectToken(addr) {
+    state.selected = addr;
+    state.selectedCurve = new ethers.Contract(addr, CURVE_ABI, state.signer);
+    if (state.selectedListener) {
+      try { state.selectedListener.removeAllListeners(); } catch (_) {}
+    }
+    state.selectedListener = state.selectedCurve;
+
+    $("detailSection").style.display = "block";
+    $("logBody").innerHTML = '<div class="empty" style="padding:24px;">Loading activity…</div>';
+    renderMarket();
+    await refreshDetail();
+    await loadLog(addr);
+
+    state.selectedCurve.on("Buy", () => { refreshDetail(); loadLog(addr); loadMarket(); });
+    state.selectedCurve.on("Sell", () => { refreshDetail(); loadLog(addr); loadMarket(); });
+    state.selectedCurve.on("Graduated", () => { refreshDetail(); loadLog(addr); loadMarket(); });
+
+    $("detailSection").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  async function refreshDetail() {
+    const c = state.selectedCurve;
+    if (!c) return;
+    const [name, symbol, price, raised, threshold, graduated, vUsdc, vToken, k, feeBps, balance, creatorAddr, platformBps, platformRecipient] = await Promise.all([
+      c.name(), c.symbol(), c.currentPrice(), c.realUsdcReserve(), c.graduationThreshold(), c.graduated(),
+      c.virtualUsdcReserve(), c.virtualTokenReserve(), c.k(), c.TRADE_FEE_BPS(),
+      c.balanceOf(state.address), c.creator(), c.platformFeeBps(), c.platformFeeRecipient(),
+    ]);
+
+    $("detailHeading").textContent = symbol + " detail";
+    $("dSym").textContent = symbol;
+    $("dName").textContent = name;
+    $("dPrice").textContent = fmtNumber(bigToNumber(price, 18), 8);
+
+    const dImage = $("dImage");
+    const dSocials = $("dSocials");
+    dImage.style.display = "none";
+    dSocials.style.display = "none";
+    dSocials.innerHTML = "";
+    if (state.registry) {
+      try {
+        const meta = await state.registry.getMetadata(await c.getAddress());
+        if (meta.isSet && meta.imageUrl) {
+          dImage.src = meta.imageUrl; // .src is a property assignment, not HTML parsing — safe regardless of content
+          dImage.onerror = () => { dImage.style.display = "none"; };
+          dImage.style.display = "block";
+        }
+        if (meta.isSet && (meta.twitter || meta.telegram || meta.website)) {
+          const linkDefs = [["X / Twitter", meta.twitter], ["Telegram", meta.telegram], ["Website", meta.website]];
+          for (const [label, url] of linkDefs) {
+            if (!url) continue;
+            const a = document.createElement("a"); // built as a real element, not string-concatenated HTML — no injection surface regardless of what the creator put in the URL
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = label;
+            a.style.color = "var(--phosphor)";
+            dSocials.appendChild(a);
+          }
+          dSocials.style.display = "flex";
+        }
+      } catch { /* metadata read failures never block the rest of the detail view */ }
+    }
+
+    const totalPct = Number(feeBps) / 100;
+    const platformPct = Number(platformBps) / 100;
+    const creatorPct = totalPct - platformPct;
+    const feeNote = platformBps > 0n
+      ? `${totalPct}% fee/trade — ${creatorPct}% to creator (${short(creatorAddr)}), ${platformPct}% to platform (${short(platformRecipient)})`
+      : `${totalPct}% fee/trade — 100% to creator (${short(creatorAddr)})`;
+    $("dFeeNote").textContent = feeNote;
+
+    const raisedNum = bigToNumber(raised, state.usdcDecimals);
+    const thresholdNum = bigToNumber(threshold, state.usdcDecimals);
+    const pct = thresholdNum > 0 ? Math.min(100, (raisedNum / thresholdNum) * 100) : 0;
+
+    $("gFill").style.width = pct + "%";
+    $("gFill").className = "gauge-fill" + (graduated ? " live" : "");
+    $("gStatus").textContent = graduated ? "LIVE ON DEX" : "RAISING";
+    $("gStatus").className = "status" + (graduated ? " live" : "");
+    $("gRaised").textContent = fmtNumber(raisedNum);
+    $("gThreshold").textContent = fmtNumber(thresholdNum);
+    $("gPct").textContent = pct.toFixed(1) + "%";
+
+    state.detailCache = { vUsdc, vToken, k, feeBps, graduated, tokenBalance: balance };
+
+    const buyBtn = $("buyBtn"), sellBtn = $("sellBtn");
+    if (graduated) {
+      buyBtn.disabled = true; buyBtn.textContent = "Trading moved to DEX pool";
+      sellBtn.disabled = true; sellBtn.textContent = "Trading moved to DEX pool";
+      banner($("detailBanner"), "info", "This token graduated — liquidity is on the DEX pool now, permanently locked (LP burned). Trade it there instead.");
+    } else {
+      buyBtn.disabled = false; buyBtn.textContent = "Buy";
+      sellBtn.disabled = false; sellBtn.textContent = "Sell";
+      clearBanner($("detailBanner"));
+    }
+
+    updateBuyQuote();
+    updateSellQuote();
+  }
+
+  function updateBuyQuote() {
+    const raw = $("buyAmount").value.trim();
+    const q = $("buyQuote");
+    if (!state.detailCache || !raw || Number.isNaN(Number(raw)) || Number(raw) <= 0) {
+      q.textContent = "Enter an amount to see estimated tokens received.";
+      return;
+    }
+    try {
+      const usdcIn = ethers.parseUnits(raw, state.usdcDecimals);
+      const { tokensOut, fee } = simulateBuy(usdcIn, state.detailCache.vUsdc, state.detailCache.vToken, state.detailCache.k, state.detailCache.feeBps);
+      const min = applySlippage(tokensOut, $("buySlippage").value);
+      q.innerHTML = `Estimated: <b>${fmtNumber(bigToNumber(tokensOut, 18))}</b> tokens
+        &nbsp;·&nbsp; fee: ${fmtNumber(bigToNumber(fee, state.usdcDecimals), 4)} USDC
+        &nbsp;·&nbsp; min received: <b>${fmtNumber(bigToNumber(min, 18))}</b>`;
+    } catch (e) {
+      q.textContent = "Invalid amount.";
+    }
+  }
+
+  function updateSellQuote() {
+    const raw = $("sellAmount").value.trim();
+    const q = $("sellQuote");
+    if (!state.detailCache || !raw || Number.isNaN(Number(raw)) || Number(raw) <= 0) {
+      q.textContent = "Enter an amount to see estimated USDC received.";
+      return;
+    }
+    try {
+      const tokensIn = ethers.parseUnits(raw, 18);
+      const { usdcOut, fee } = simulateSell(tokensIn, state.detailCache.vUsdc, state.detailCache.vToken, state.detailCache.k, state.detailCache.feeBps);
+      const min = applySlippage(usdcOut, $("sellSlippage").value);
+      q.innerHTML = `Estimated: <b>${fmtNumber(bigToNumber(usdcOut, state.usdcDecimals))}</b> USDC
+        &nbsp;·&nbsp; fee: ${fmtNumber(bigToNumber(fee, state.usdcDecimals), 4)} USDC
+        &nbsp;·&nbsp; min received: <b>${fmtNumber(bigToNumber(min, state.usdcDecimals))}</b>`;
+    } catch (e) {
+      q.textContent = "Invalid amount.";
+    }
+  }
+
+  async function handleBuy() {
+    const raw = $("buyAmount").value.trim();
+    if (!raw || Number(raw) <= 0) { banner($("detailBanner"), "error", "ENTER A USDC AMOUNT TO BUY."); return; }
+    const usdcIn = ethers.parseUnits(raw, state.usdcDecimals);
+    const { tokensOut } = simulateBuy(usdcIn, state.detailCache.vUsdc, state.detailCache.vToken, state.detailCache.k, state.detailCache.feeBps);
+    const minTokensOut = applySlippage(tokensOut, $("buySlippage").value);
+
+    const buyBtn = $("buyBtn");
+    buyBtn.disabled = true;
+    try {
+      const allowance = await state.usdc.allowance(state.address, state.selected);
+      if (allowance < usdcIn) {
+        buyBtn.textContent = "Approving USDC…";
+        const approveTx = await state.usdc.approve(state.selected, ethers.MaxUint256);
+        await approveTx.wait();
+      }
+      buyBtn.textContent = "Confirm in wallet…";
+      const tx = await state.selectedCurve.buy(usdcIn, minTokensOut, { gasLimit: 1_500_000 });
+      buyBtn.textContent = "Buying…";
+      await tx.wait();
+      banner($("detailBanner"), "success", "BOUGHT — you received at least " + fmtNumber(bigToNumber(minTokensOut, 18)) + " tokens.");
+      $("buyAmount").value = "";
+      await refreshDetail();
+    } catch (e) {
+      banner($("detailBanner"), "error", "BUY FAILED: " + (e.shortMessage || e.reason || e.message || String(e)));
+    } finally {
+      buyBtn.disabled = false;
+      buyBtn.textContent = "Buy";
+    }
+  }
+
+  async function handleSell() {
+    const raw = $("sellAmount").value.trim();
+    if (!raw || Number(raw) <= 0) { banner($("detailBanner"), "error", "ENTER A TOKEN AMOUNT TO SELL."); return; }
+    const tokensIn = ethers.parseUnits(raw, 18);
+    const { usdcOut } = simulateSell(tokensIn, state.detailCache.vUsdc, state.detailCache.vToken, state.detailCache.k, state.detailCache.feeBps);
+    const minUsdcOut = applySlippage(usdcOut, $("sellSlippage").value);
+
+    const sellBtn = $("sellBtn");
+    sellBtn.disabled = true;
+    try {
+      // No approval needed: sell() moves the caller's own balance directly
+      // (the curve contract IS the token), it never goes through
+      // transferFrom/allowance.
+      sellBtn.textContent = "Confirm in wallet…";
+      const tx = await state.selectedCurve.sell(tokensIn, minUsdcOut, { gasLimit: 1_500_000 });
+      sellBtn.textContent = "Selling…";
+      await tx.wait();
+      banner($("detailBanner"), "success", "SOLD — you received at least " + fmtNumber(bigToNumber(minUsdcOut, state.usdcDecimals)) + " USDC.");
+      $("sellAmount").value = "";
+      await refreshDetail();
+    } catch (e) {
+      banner($("detailBanner"), "error", "SELL FAILED: " + (e.shortMessage || e.reason || e.message || String(e)));
+    } finally {
+      sellBtn.disabled = false;
+      sellBtn.textContent = "Sell";
+    }
+  }
+
+  // ---------------- activity log ----------------
+  // ---------------- price chart ----------------
+  function renderPriceChart(trades) {
+    const box = $("chartEmpty");
+    if (trades.length === 0) {
+      box.style.display = "flex";
+      $("chartMeta").textContent = "—";
+      if (state.chart) { state.chart.destroy(); state.chart = null; }
+      return;
+    }
+    box.style.display = "none";
+
+    const labels = trades.map((t) => "#" + t.block);
+    const prices = trades.map((t) => t.price);
+    const pointColors = trades.map((t) => t.side === "buy" ? "#5EEAD4" : "#C6554A");
+
+    const first = prices[0], last = prices[prices.length - 1];
+    const change = first > 0 ? ((last - first) / first) * 100 : 0;
+    $("chartMeta").textContent = `${trades.length} trade${trades.length === 1 ? "" : "s"} · ${change >= 0 ? "+" : ""}${change.toFixed(1)}% since first trade`;
+
+    const ctx = $("priceChart").getContext("2d");
+    const data = {
+      labels,
+      datasets: [{
+        data: prices,
+        borderColor: "#5EEAD4",
+        backgroundColor: "rgba(94,234,212,0.08)",
+        borderWidth: 1.5,
+        pointRadius: 2,
+        pointBackgroundColor: pointColors,
+        pointBorderWidth: 0,
+        tension: 0.15,
+        fill: true,
+      }],
+    };
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 200 },
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: "#10151D", borderColor: "#1B222C", borderWidth: 1,
+        titleColor: "#6B7480", bodyColor: "#E8E6DF", titleFont: { family: "JetBrains Mono", size: 10 }, bodyFont: { family: "JetBrains Mono", size: 11 },
+        callbacks: { label: (c) => fmtNumber(c.parsed.y, 8) + " USDC" },
+      } },
+      scales: {
+        x: { grid: { color: "#1B222C" }, ticks: { color: "#454E5A", font: { family: "JetBrains Mono", size: 9 }, maxTicksLimit: 6 } },
+        y: { grid: { color: "#1B222C" }, ticks: { color: "#454E5A", font: { family: "JetBrains Mono", size: 9 }, callback: (v) => fmtNumber(v, 6) } },
+      },
+    };
+
+    if (state.chart) {
+      state.chart.data = data;
+      state.chart.options = options;
+      state.chart.update();
+    } else {
+      state.chart = new Chart(ctx, { type: "line", data, options });
+    }
+  }
+
+  // ---------------- manipulation heuristic ----------------
+  // Deliberately simple and stated plainly rather than dressed up: looks
+  // at the recent trade window, finds the local peak price, and flags
+  // when the latest price has fallen a lot from that peak with sell
+  // pressure behind it. This is a heuristic on public trade data, not a
+  // surveillance system — it can't see wallets acting in coordination,
+  // only price/volume shape. False positives (real volatility) and false
+  // negatives (slow, patient dumps) are both expected. Treat it as a
+  // prompt to go look, not a verdict.
+  function updateManipulationAlert(trades) {
+    const el = $("manipAlert");
+    const WINDOW = 15;
+    const recent = trades.slice(-WINDOW);
+    if (recent.length < 4) { el.className = "alert-badge"; return; }
+
+    let peak = 0, peakIdx = 0;
+    recent.forEach((t, i) => { if (t.price > peak) { peak = t.price; peakIdx = i; } });
+    const latest = recent[recent.length - 1];
+    const drawdown = peak > 0 ? ((peak - latest.price) / peak) * 100 : 0;
+    const sellsSincePeak = recent.slice(peakIdx + 1).filter((t) => t.side === "sell").length;
+
+    if (drawdown >= 30 && sellsSincePeak >= 2) {
+      $("manipAlertText").textContent =
+        `Price is down ${drawdown.toFixed(0)}% from a recent local high, with ${sellsSincePeak} sells since — could be normal volatility or could be a dump in progress. Simple heuristic on public trades, not a verdict — check the chart and recent activity yourself.`;
+      el.className = "alert-badge show";
+    } else {
+      el.className = "alert-badge";
+    }
+  }
+
+  async function loadLog(addr) {
+    try {
+      const curve = new ethers.Contract(addr, CURVE_ABI, state.provider);
+      const latestBlock = await state.provider.getBlockNumber();
+      const [buys, sells, grads] = await Promise.all([
+        curve.queryFilter(curve.filters.Buy(), 0, latestBlock),
+        curve.queryFilter(curve.filters.Sell(), 0, latestBlock),
+        curve.queryFilter(curve.filters.Graduated(), 0, latestBlock),
+      ]);
+      const entries = [
+        ...buys.map((e) => ({ kind: "buy", block: e.blockNumber, idx: e.index, args: e.args, text: short(e.args.buyer) + " bought " + fmtNumber(bigToNumber(e.args.tokensOut, 18)) + " for " + fmtNumber(bigToNumber(e.args.usdcIn, state.usdcDecimals)) + " USDC" })),
+        ...sells.map((e) => ({ kind: "sell", block: e.blockNumber, idx: e.index, args: e.args, text: short(e.args.seller) + " sold " + fmtNumber(bigToNumber(e.args.tokensIn, 18)) + " for " + fmtNumber(bigToNumber(e.args.usdcOut, state.usdcDecimals)) + " USDC" })),
+        ...grads.map((e) => ({ kind: "grad", block: e.blockNumber, idx: e.index, text: "graduated — LP burned, pair " + short(e.args.pair) })),
+      ].sort((a, b) => (b.block - a.block) || (b.idx - a.idx)).slice(0, 25);
+
+      if (entries.length === 0) {
+        $("logBody").innerHTML = '<div class="empty" style="padding:24px;">No activity yet on this token.</div>';
+      } else {
+        $("logBody").innerHTML = entries.map((e) =>
+          `<div class="log-line"><span>#${e.block}</span><span class="kind ${e.kind}">${e.kind.toUpperCase()}</span><span class="detail-text">${escapeHtml(e.text)}</span></div>`
+        ).join("");
+      }
+
+      // Chronological (oldest first) trade list with an implied price
+      // per trade, for the chart and the manipulation heuristic. This is
+      // a display-only reconstruction (uses Number, not BigInt) — never
+      // used for anything that moves funds.
+      const trades = [...buys.map((e) => ({ block: e.blockNumber, idx: e.index, side: "buy",
+          price: bigToNumber(e.args.usdcIn, state.usdcDecimals) / (bigToNumber(e.args.tokensOut, 18) || 1),
+          usdcSize: bigToNumber(e.args.usdcIn, state.usdcDecimals) })),
+        ...sells.map((e) => ({ block: e.blockNumber, idx: e.index, side: "sell",
+          price: bigToNumber(e.args.usdcOut, state.usdcDecimals) / (bigToNumber(e.args.tokensIn, 18) || 1),
+          usdcSize: bigToNumber(e.args.usdcOut, state.usdcDecimals) }))]
+        .sort((a, b) => (a.block - b.block) || (a.idx - b.idx));
+
+      renderPriceChart(trades);
+      updateManipulationAlert(trades);
+    } catch (e) {
+      $("logBody").innerHTML = '<div class="empty" style="padding:24px;">Could not load activity: ' + escapeHtml(e.message || String(e)) + '</div>';
+    }
+  }
+
+  // ---------------- max buttons ----------------
+  async function setMaxBuy() {
+    if (!state.usdc || !state.address) return;
+    const bal = await state.usdc.balanceOf(state.address);
+    $("buyAmount").value = ethers.formatUnits(bal, state.usdcDecimals);
+    updateBuyQuote();
+  }
+  function setMaxSell() {
+    if (!state.detailCache) return;
+    $("sellAmount").value = ethers.formatUnits(state.detailCache.tokenBalance, 18);
+    updateSellQuote();
+  }
+
+  // ---------------- wire up ----------------
+  $("connectBtn").addEventListener("click", connectWallet);
+  $("applyCfgBtn").addEventListener("click", applyConfig);
+  $("addArcNetworkBtn").addEventListener("click", addArcNetwork);
+  $("fillArcUsdcBtn").addEventListener("click", fillArcUsdc);
+  $("refreshBtn").addEventListener("click", loadMarket);
+  $("marketSearch").addEventListener("input", renderMarket);
+  $("marketSort").addEventListener("change", renderMarket);
+  $("marketMineOnly").addEventListener("change", renderMarket);
+  $("launchBtn").addEventListener("click", handleLaunch);
+  $("closeDetailBtn").addEventListener("click", () => { $("detailSection").style.display = "none"; state.selected = null; renderMarket(); });
+  $("buyBtn").addEventListener("click", handleBuy);
+  $("sellBtn").addEventListener("click", handleSell);
+  $("buyAmount").addEventListener("input", updateBuyQuote);
+  $("sellAmount").addEventListener("input", updateSellQuote);
+  $("buySlippage").addEventListener("input", updateBuyQuote);
+  $("sellSlippage").addEventListener("input", updateSellQuote);
+  $("buyMaxBtn").addEventListener("click", setMaxBuy);
+  $("sellMaxBtn").addEventListener("click", setMaxSell);
+  $("cfgSlippage").addEventListener("input", (e) => { $("buySlippage").value = e.target.value; $("sellSlippage").value = e.target.value; });
+
+})();
+</script>
+</body>
+</html>

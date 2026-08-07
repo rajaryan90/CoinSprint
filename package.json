@@ -1,0 +1,26 @@
+{
+  "name": "arc-launchpad",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fair-launch memecoin bonding-curve launchpad: LaunchpadFactory + MemecoinBondingCurve + TokenMetadataRegistry, deploy scripts, integration test, and static frontend.",
+  "license": "MIT",
+  "scripts": {
+    "compile": "node scripts/compile.mjs",
+    "node": "hardhat node",
+    "deploy:local": "npm run compile && node scripts/deploy.mjs",
+    "deploy:arc-testnet": "npm run compile && NETWORK=arc-testnet node scripts/deploy.mjs",
+    "test:integration": "node test/test-market-integration.mjs",
+    "frontend": "npx --yes serve frontend -l 8080"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "solc": "^0.8.24",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.5",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@openzeppelin/contracts-upgradeable": "^5.1.0"
+  }
+}
